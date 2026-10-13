@@ -89,10 +89,6 @@ class RiveReactNativeView: UIView {
         do {
           let artboard = try await config.file.createArtboard(config.artboardName)
 
-          // Resolve the instance before creating the state machine and bind it
-          // there: scripts run `init` during state machine creation and cache
-          // `context:viewModel()`, so an instance bound afterwards is never
-          // seen by them (#414).
           let bindingInstance: ViewModelInstance?
           switch config.bindData {
           case .none:
