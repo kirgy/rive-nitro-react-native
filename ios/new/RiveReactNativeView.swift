@@ -89,35 +89,32 @@ class RiveReactNativeView: UIView {
         do {
           let artboard = try await config.file.createArtboard(config.artboardName)
 
-          let dataBind: RiveRuntime.DataBind
+          let bindingInstance: ViewModelInstance?
           switch config.bindData {
           case .none:
-            dataBind = .none
+            bindingInstance = nil
           case .auto:
             // Probe for a default ViewModel first. If the artboard has none,
             // the SDK would fire an error event — skip auto-binding silently instead.
             do {
               let _ = try await config.file.getDefaultViewModelInfo(for: artboard)
-              dataBind = .auto
+              bindingInstance = try await config.file.createViewModelInstance(
+                .viewModelDefault(from: .artboardDefault(artboard))
+              )
             } catch {
-              dataBind = .none
+              bindingInstance = nil
             }
           case .instance(let vmi):
-            dataBind = .instance(vmi)
+            bindingInstance = vmi
           case .byName(let name):
             let vmInfo = try await config.file.getDefaultViewModelInfo(for: artboard)
-            let vmi = try await config.file.createViewModelInstance(.name(name, from: .name(vmInfo.viewModelName)))
-            dataBind = .instance(vmi)
+            bindingInstance = try await config.file.createViewModelInstance(.name(name, from: .name(vmInfo.viewModelName)))
           }
+
+          let stateMachine = try await artboard.createStateMachine(config.stateMachineName, binding: bindingInstance)
+          let dataBind: RiveRuntime.DataBind = bindingInstance.map { .instance($0) } ?? .none
 
           guard !Task.isCancelled else { return }
-
-          let stateMachine: StateMachine
-          if case .instance(let vmi) = dataBind {
-            stateMachine = try await artboard.createStateMachine(config.stateMachineName, binding: vmi)
-          } else {
-            stateMachine = try await artboard.createStateMachine(config.stateMachineName)
-          }
 
           let rive = try await RiveRuntime.Rive(
             file: config.file,
