@@ -1,9 +1,18 @@
-import { describe, it, expect, render, cleanup } from 'react-native-harness';
-import { View } from 'react-native';
+import {
+  describe,
+  it,
+  expect,
+  render,
+  waitFor,
+  cleanup,
+} from 'react-native-harness';
+import { Platform, View } from 'react-native';
 import {
   RiveView,
   RiveFileFactory,
+  DataBindMode,
   Fit,
+  type RiveViewRef,
   type ViewModelInstance,
 } from '@rive-app/react-native';
 
@@ -81,4 +90,65 @@ describe('Scripts see the dataBind instance (issue #414)', () => {
 
     cleanup();
   });
+
+  // Auto and byName create the instance natively, so read it back from the
+  // view: the script must run against the same instance JS sees.
+  for (const [label, dataBind] of [
+    ['DataBindMode.Auto', DataBindMode.Auto],
+    ['byName', { byName: 'Default' }],
+  ] as const) {
+    it(`script runs against the ${label} instance returned by getViewModelInstance()`, async () => {
+      // getViewModelInstance() isn't exposed for view-created instances on Android experimental
+      if (
+        Platform.OS === 'android' &&
+        RiveFileFactory.getBackend() === 'experimental'
+      ) {
+        return;
+      }
+      const file = await RiveFileFactory.fromSource(
+        SCRIPT_BINDING_PROBE,
+        undefined
+      );
+      let viewRef: RiveViewRef | null = null;
+
+      await render(
+        <View style={{ width: 160, height: 160 }}>
+          <RiveView
+            hybridRef={{
+              f: (ref: RiveViewRef | null) => {
+                viewRef = ref;
+              },
+            }}
+            style={{ flex: 1 }}
+            file={file}
+            artboardName="Binding Probe"
+            stateMachineName="Main"
+            dataBind={dataBind}
+            autoPlay={true}
+            fit={Fit.Layout}
+          />
+        </View>
+      );
+
+      let instance: ViewModelInstance | undefined;
+      await waitFor(
+        () => {
+          instance = viewRef?.getViewModelInstance();
+          expect(instance).toBeDefined();
+        },
+        { timeout: 5000 }
+      );
+      expectDefined(instance);
+
+      expect(await waitForValues(instance, { isReady: 1 })).toEqual({
+        isReady: 1,
+      });
+      await number(instance, 'seed').setValueAsync(42);
+      expect(await waitForValues(instance, { observedSeed: 42 })).toEqual({
+        observedSeed: 42,
+      });
+
+      cleanup();
+    });
+  }
 });
