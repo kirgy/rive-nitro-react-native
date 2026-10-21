@@ -1,31 +1,22 @@
 package com.rive
 
+import app.rive.ExperimentalDeferredRendering
 import app.rive.RenderBackend
 import app.rive.core.CommandQueue
-import java.lang.reflect.InvocationTargetException
 
 /**
- * rive-android only exposes its deferred (GPU Canvas) worker through the
- * Compose-only `rememberDeferredRiveWorker`; `CommandQueue.createDeferred` is
- * Kotlin-internal. Reflection reaches it under either its mangled JVM name or
- * a plain `createDeferred`.
+ * rive-android 11.14.2+ exposes its deferred (GPU Canvas) worker through the public
+ * `CommandQueue(enableGPUCanvas = true)` constructor. Older versions only had the
+ * Kotlin-internal `CommandQueue.createDeferred`, which 11.14.2 removed.
  */
 internal object DeferredRiveWorker {
-  private val factory by lazy {
-    val signature = arrayOf(RenderBackend::class.java, Boolean::class.javaPrimitiveType)
-    CommandQueue.Companion::class.java.declaredMethods.firstOrNull {
-      (it.name == "createDeferred" || it.name.startsWith("createDeferred$")) &&
-        it.parameterTypes.contentEquals(signature)
-    }
-  }
-
   /** Null when this rive-android has no deferred worker entry point. */
+  @OptIn(ExperimentalDeferredRendering::class)
   fun createOrNull(renderBackend: RenderBackend): CommandQueue? {
-    val method = factory ?: return null
     return try {
-      method.invoke(CommandQueue.Companion, renderBackend, false) as CommandQueue
-    } catch (e: InvocationTargetException) {
-      throw e.targetException
+      CommandQueue(renderBackend = renderBackend, enableGPUCanvas = true)
+    } catch (e: NoSuchMethodError) {
+      null
     }
   }
 }
