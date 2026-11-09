@@ -338,39 +338,39 @@ void listElementIsUsable;
 declare const untypedInstance: UntypedViewModelInstance;
 declare const plainInstance: ViewModelInstance;
 
-// Typed overload: valid direct number path → result typed as number
+// Typed instance: valid direct number path → result typed as number
 expectType<UseRivePropertyResult<number>>(
   useRiveNumber('multiplierValue', storeVM)
 );
 
-// Typed overload: valid nested number path (nested ViewModel)
+// Typed instance: valid nested number path (nested ViewModel)
 expectType<UseRivePropertyResult<number>>(
   useRiveNumber('property of pegVM/multiplierValue', storeVM)
 );
 
-// Typed overload: wrong kind — xbuttonClick is a trigger, not a number
+// Typed instance: wrong kind — xbuttonClick is a trigger, not a number
 expectError(useRiveNumber('xbuttonClick', storeVM));
 
-// Typed overload: nonexistent path
+// Typed instance: nonexistent path
 expectError(useRiveNumber('doesNotExist', storeVM));
 
-// Typed overload: nested path with wrong property kind
+// Typed instance: nested path with wrong property kind
 expectError(useRiveNumber('property of pegVM/blink', storeVM));
 
-// Typed instance rejected by untyped overload → forces typed overload → wrong path errors
+// Typed instance: a widened `string` path is not a known path
 expectError(useRiveNumber('multiplierValue' as string, storeVM));
 
-// Untyped overload: plain ViewModelInstance accepts any string path
+// Untyped instance: accepts any string path
 expectType<UseRivePropertyResult<number>>(
   useRiveNumber('any/path', untypedInstance)
 );
 
-// Untyped overload: plain ViewModelInstance (no brand) also accepted
+// Plain ViewModelInstance (no brand) also accepts any string path
 expectType<UseRivePropertyResult<number>>(
   useRiveNumber('any/path', plainInstance)
 );
 
-// No instance: falls back to untyped overload, still returns number result
+// No instance: any string path, still returns number result
 expectType<UseRivePropertyResult<number>>(useRiveNumber('multiplierValue'));
 
 // ============================================================

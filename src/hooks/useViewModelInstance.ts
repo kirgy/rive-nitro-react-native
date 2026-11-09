@@ -3,7 +3,11 @@
 import { useMemo, useRef } from 'react';
 import type { ViewModel, ViewModelInstance } from '../specs/ViewModel.nitro';
 import type { RiveFile } from '../specs/RiveFile.nitro';
-import type { RiveFileSchema } from '../core/TypedRiveFile';
+import type {
+  RiveFileSchema,
+  RiveFileSource,
+  SchemaOf,
+} from '../core/TypedRiveFile';
 import type {
   IsBaseSchema,
   TypedViewModelInstance,
@@ -127,6 +131,36 @@ export interface UseViewModelInstanceViewModelParams
 }
 
 export type UseViewModelInstanceRefParams = UseViewModelInstanceBaseParams;
+
+/**
+ * A `.riv` import whose generated schema is statically known. A plain asset
+ * number carries no schema, so it resolves to an object keyed by the fix, which
+ * shows in the compiler error. `any` (e.g. `require('./file.riv')`) resolves to
+ * `never`, the only type `any` isn't assignable to.
+ */
+type AssetWithSchema<A> = 0 extends 1 & A
+  ? never
+  : IsBaseSchema<SchemaOf<A>> extends true
+    ? {
+        readonly 'This .riv has no generated schema: run npx rive-gen-types on it': true;
+      }
+    : A;
+
+/**
+ * RiveViewRef params that type the view's bound instance with a generated
+ * schema. The view binds its own instance, so both fields are type-level only:
+ * neither is read at runtime, and `viewModelName` must be the ViewModel bound
+ * to the view's artboard.
+ */
+export interface UseViewModelInstanceRefSchemaParams<
+  A extends RiveFileSource,
+  N extends string,
+> extends UseViewModelInstanceRefParams {
+  /** The `.riv` import (with a generated `.riv.d.ts`) the view is showing. */
+  asset: A & AssetWithSchema<A>;
+  /** The ViewModel bound to the view's artboard. */
+  viewModelName: N;
+}
 
 type ViewModelSource = ViewModel | RiveFile | RiveViewRef;
 
@@ -353,6 +387,19 @@ type UseViewModelInstanceFileRequiredResult<
  *
  * @example
  * ```tsx
+ * // From RiveViewRef, typed by the .riv's generated schema (types only —
+ * // viewModelName must be the ViewModel bound to the view's artboard)
+ * import rewardsRiv from './rewards.riv';
+ * const { instance } = useViewModelInstance(riveViewRef, {
+ *   async: true,
+ *   asset: rewardsRiv,
+ *   viewModelName: 'Rewards',
+ * });
+ * useRiveNumber('Price_Value', instance); // paths complete and are checked
+ * ```
+ *
+ * @example
+ * ```tsx
  * // Create a new blank instance from ViewModel
  * const { instance } = useViewModelInstance(viewModel, { async: true, useNew: true });
  * ```
@@ -456,6 +503,28 @@ export function useViewModelInstance(
   source: RiveViewRef | null | undefined,
   params?: UseViewModelInstanceRefParams
 ): UseViewModelInstanceResult;
+
+// RiveViewRef overloads — schema-aware when `asset` and `viewModelName` are
+// passed (types only: the view binds its own instance). Declared last: when
+// every overload fails TypeScript reports the last one's error, so a wrong
+// `viewModelName` or a schemaless `asset` is reported against that field.
+export function useViewModelInstance<
+  A extends RiveFileSource,
+  N extends Extract<keyof SchemaOf<A>['viewModels'], string>,
+>(
+  source: RiveViewRef,
+  params: UseViewModelInstanceRefSchemaParams<A, N> & {
+    async: true;
+    required: true;
+  }
+): UseViewModelInstanceFileRequiredResult<SchemaOf<A>, N>;
+export function useViewModelInstance<
+  A extends RiveFileSource,
+  N extends Extract<keyof SchemaOf<A>['viewModels'], string>,
+>(
+  source: RiveViewRef | null | undefined,
+  params: UseViewModelInstanceRefSchemaParams<A, N> & { async: true }
+): UseViewModelInstanceFileResult<SchemaOf<A>, N>;
 
 // Implementation
 export function useViewModelInstance(

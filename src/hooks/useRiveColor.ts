@@ -5,12 +5,7 @@ import type {
 } from '../specs/ViewModel.nitro';
 import { useRiveProperty } from './useRiveProperty';
 import { RiveColor } from '../core/RiveColor';
-import type {
-  PathsOfKind,
-  TypedViewModelInstance,
-  UntypedViewModelInstance,
-} from '../core/TypedViewModelInstance';
-import type { RiveFileSchema } from '../core/TypedRiveFile';
+import type { InstancePathsOfKind } from '../core/TypedViewModelInstance';
 
 const getColorProperty = (vmi: ViewModelInstance, p: string) =>
   vmi.colorProperty(p);
@@ -24,20 +19,13 @@ export interface UseRiveColorResult {
 /**
  * Hook for interacting with color ViewModel instance properties.
  *
- * @param path - The path to the color property
+ * @param path - The path to the color property. With a typed instance, one of its color paths.
  * @param viewModelInstance - The ViewModelInstance containing the color property to operate on
  * @returns An object with the color value as RGBA, a setter function that accepts either RGBA or hex string, and an error if the property is not found
  */
-export function useRiveColor<
-  T extends RiveFileSchema,
-  N extends Extract<keyof T['viewModels'], string>,
->(
-  path: PathsOfKind<T, N, 'color'>,
-  viewModelInstance?: TypedViewModelInstance<T, N> | null
-): UseRiveColorResult;
-export function useRiveColor(
-  path: string,
-  viewModelInstance?: UntypedViewModelInstance | null
+export function useRiveColor<I extends ViewModelInstance>(
+  path: InstancePathsOfKind<I, 'color'>,
+  viewModelInstance?: I | null
 ): UseRiveColorResult;
 export function useRiveColor(
   path: string,
