@@ -5,6 +5,7 @@ import type {
 } from '../specs/ViewModel.nitro';
 import type { UseRiveListResult } from '../types';
 import { useDisposableMemo } from './useDisposableMemo';
+import type { InstancePathsOfKind } from '../core/TypedViewModelInstance';
 
 /**
  * Hook for interacting with list ViewModel instance properties.
@@ -12,10 +13,14 @@ import { useDisposableMemo } from './useDisposableMemo';
  * All operations go through the async native API — on the experimental
  * backend the sync accessors would block the JS thread on the command queue.
  *
- * @param path - The path to the list property
+ * @param path - The path to the list property. With a typed instance, one of its list paths.
  * @param viewModelInstance - The ViewModelInstance containing the list property
  * @returns An object with list length, manipulation methods, and error state
  */
+export function useRiveList<I extends ViewModelInstance>(
+  path: InstancePathsOfKind<I, 'list'>,
+  viewModelInstance?: I | null
+): UseRiveListResult;
 export function useRiveList(
   path: string,
   viewModelInstance?: ViewModelInstance | null

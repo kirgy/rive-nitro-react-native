@@ -257,18 +257,55 @@ export interface TypedViewModelInstance<
     | undefined
   >;
 
-  /** Brand that prevents typed instances from matching untyped hook overloads. */
+  /**
+   * Phantom brand carrying the schema and ViewModel name, so the `useRive*`
+   * hooks can recover them from the instance alone. Never exists at runtime.
+   */
   readonly __vmBrand: [T, VMName];
 }
 
 /**
  * A plain ViewModelInstance with no schema type information.
- * Used in the untyped hook overloads — typed instances are intentionally
- * excluded so TypeScript picks the typed overload when a schema is known.
+ * The `useRive*` hooks accept any string path for it.
  */
 export type UntypedViewModelInstance = ViewModelInstance & {
   __vmBrand?: never;
 };
+
+/**
+ * Property paths of `Kind` valid on instance `I`: the schema's paths when `I`
+ * is a {@link TypedViewModelInstance}, any string otherwise.
+ *
+ * The `useRive*` hooks type their `path` with this rather than overloading on
+ * typed/untyped instances. With overloads a wrong path fails every overload,
+ * so TypeScript reports "No overload matches this call" on the hook and prints
+ * the schema; with one signature the error lands on the path and lists the
+ * valid ones, and the editor completes them.
+ */
+export type InstancePathsOfKind<I, Kind extends string> = I extends {
+  readonly __vmBrand: [
+    infer T extends RiveFileSchema,
+    infer VMName extends string,
+  ];
+}
+  ? PathsOfKind<T, VMName & keyof T['viewModels'] & string, Kind>
+  : string;
+
+/**
+ * Enum values of the property at `P` on instance `I`; `string` for untyped
+ * instances.
+ */
+export type InstanceEnumValuesAt<I, P extends string> = I extends {
+  readonly __vmBrand: [
+    infer T extends RiveFileSchema,
+    infer VMName extends string,
+  ];
+}
+  ? EnumValuesOf<
+      T,
+      PropTypeAtPath<T, VMName & keyof T['viewModels'] & string, P>
+    >
+  : string;
 
 /**
  * Convenience alias: infer the ViewModel instance type directly from a RiveFileSource import.

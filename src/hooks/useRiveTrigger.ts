@@ -8,12 +8,7 @@ import type {
   UseViewModelInstanceTriggerParameters,
 } from '../types';
 import { useDisposableMemo } from './useDisposableMemo';
-import type {
-  PathsOfKind,
-  TypedViewModelInstance,
-  UntypedViewModelInstance,
-} from '../core/TypedViewModelInstance';
-import type { RiveFileSchema } from '../core/TypedRiveFile';
+import type { InstancePathsOfKind } from '../core/TypedViewModelInstance';
 
 /**
  * Hook for interacting with trigger ViewModel instance properties.
@@ -22,22 +17,14 @@ import type { RiveFileSchema } from '../core/TypedRiveFile';
  * triggers take a user callback whose identity may change across renders.
  * Storing the callback in a ref avoids coupling it to native property disposal.
  *
- * @param path - The path to the trigger property
+ * @param path - The path to the trigger property. With a typed instance, one of its trigger paths.
  * @param viewModelInstance - The ViewModelInstance containing the trigger property
  * @param params - Optional parameters including onTrigger callback
  * @returns A trigger function and any error
  */
-export function useRiveTrigger<
-  T extends RiveFileSchema,
-  N extends Extract<keyof T['viewModels'], string>,
->(
-  path: PathsOfKind<T, N, 'trigger'>,
-  viewModelInstance?: TypedViewModelInstance<T, N> | null,
-  params?: UseViewModelInstanceTriggerParameters
-): UseRiveTriggerResult;
-export function useRiveTrigger(
-  path: string,
-  viewModelInstance?: UntypedViewModelInstance | null,
+export function useRiveTrigger<I extends ViewModelInstance>(
+  path: InstancePathsOfKind<I, 'trigger'>,
+  viewModelInstance?: I | null,
   params?: UseViewModelInstanceTriggerParameters
 ): UseRiveTriggerResult;
 export function useRiveTrigger(
